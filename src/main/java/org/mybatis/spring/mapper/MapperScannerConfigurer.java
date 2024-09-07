@@ -356,10 +356,12 @@ public class MapperScannerConfigurer
    */
   @Override
   public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+    // 在ApplicationContext 进行 postProcessBeanFactory时进行-》invokeBeanFactoryPostProcessors
     if (this.processPropertyPlaceHolders) {
       processPropertyPlaceHolders();
     }
 
+    // 生成ClassPathMapperScanner
     ClassPathMapperScanner scanner = new ClassPathMapperScanner(registry);
     scanner.setAddToConfig(this.addToConfig);
     scanner.setAnnotationClass(this.annotationClass);
@@ -370,6 +372,10 @@ public class MapperScannerConfigurer
     scanner.setSqlSessionTemplateBeanName(this.sqlSessionTemplateBeanName);
     scanner.setResourceLoader(this.applicationContext);
     scanner.setBeanNameGenerator(this.nameGenerator);
+    /**
+     * 设置扫描出来的类，用来创建对象bean的FactoryBean，
+     *  默认就是MapperFactoryBean！！！
+     */
     scanner.setMapperFactoryBeanClass(this.mapperFactoryBeanClass);
     if (StringUtils.hasText(lazyInitialization)) {
       scanner.setLazyInitialization(Boolean.valueOf(lazyInitialization));
@@ -377,7 +383,10 @@ public class MapperScannerConfigurer
     if (StringUtils.hasText(defaultScope)) {
       scanner.setDefaultScope(defaultScope);
     }
+    // 让scanner跟上面设置的参数注册 扫描的条件过滤器
     scanner.registerFilters();
+
+    // 扫描bean
     scanner.scan(
         StringUtils.tokenizeToStringArray(this.basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
   }

@@ -92,6 +92,8 @@ public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements Factor
    */
   @Override
   public T getObject() throws Exception {
+    // 可以看集成的时候，就是通过SqlSession（实际是集成的sqlSessionTemplate）getMapper拿到
+    // 也就是返回的bean是mybatis的mapper代理
     return getSqlSession().getMapper(this.mapperInterface);
   }
 

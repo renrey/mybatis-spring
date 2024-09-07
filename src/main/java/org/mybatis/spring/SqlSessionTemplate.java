@@ -89,6 +89,8 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
    *          a factory of SqlSession
    */
   public SqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+
+    // 默认使用simple
     this(sqlSessionFactory, sqlSessionFactory.getConfiguration().getDefaultExecutorType());
   }
 
@@ -128,7 +130,11 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
     this.sqlSessionFactory = sqlSessionFactory;
     this.executorType = executorType;
     this.exceptionTranslator = exceptionTranslator;
-    this.sqlSessionProxy = (SqlSession) newProxyInstance(SqlSessionFactory.class.getClassLoader(),
+    /**
+     * 创建SqlSession代理类，封装了增强：
+     * @see SqlSessionInterceptor#invoke(Object, Method, Object[])
+     */
+    this. sqlSessionProxy = (SqlSession) newProxyInstance(SqlSessionFactory.class.getClassLoader(),
         new Class[] { SqlSession.class }, new SqlSessionInterceptor());
   }
 
@@ -309,6 +315,7 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
    */
   @Override
   public <T> T getMapper(Class<T> type) {
+    // 通过Configuration (已解析的) 返回mapper代理
     return getConfiguration().getMapper(type, this);
   }
 
@@ -419,10 +426,14 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
   private class SqlSessionInterceptor implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      // 1. 自己找原生mybatis的sqlSession
+      // 这个方法没次调用都会创建新的SqlSession
       SqlSession sqlSession = getSqlSession(SqlSessionTemplate.this.sqlSessionFactory,
           SqlSessionTemplate.this.executorType, SqlSessionTemplate.this.exceptionTranslator);
       try {
+        // 调用sqlSession中当前方法
         Object result = method.invoke(sqlSession, args);
+        // 不是spring事务中，需要使用原生提交
         if (!isSqlSessionTransactional(sqlSession, SqlSessionTemplate.this.sqlSessionFactory)) {
           // force commit even on non-dirty sessions because some databases require
           // a commit/rollback before calling close()
@@ -430,6 +441,7 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
         }
         return result;
       } catch (Throwable t) {
+        // 异常处理
         Throwable unwrapped = unwrapThrowable(t);
         if (SqlSessionTemplate.this.exceptionTranslator != null && unwrapped instanceof PersistenceException) {
           // release the connection to avoid a deadlock if the translator is no loaded. See issue #22
@@ -443,6 +455,8 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
         }
         throw unwrapped;
       } finally {
+        // 执行结束后，close掉session
+        // spring事务实际是计数-1
         if (sqlSession != null) {
           closeSqlSession(sqlSession, SqlSessionTemplate.this.sqlSessionFactory);
         }

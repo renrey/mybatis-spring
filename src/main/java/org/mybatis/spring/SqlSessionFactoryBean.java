@@ -574,6 +574,7 @@ public class SqlSessionFactoryBean
     state((configuration == null && configLocation == null) || !(configuration != null && configLocation != null),
         "Property 'configuration' and 'configLocation' can not specified with together");
 
+    // 创建对象
     this.sqlSessionFactory = buildSqlSessionFactory();
   }
 
@@ -594,6 +595,7 @@ public class SqlSessionFactoryBean
     final Configuration targetConfiguration;
 
     XMLConfigBuilder xmlConfigBuilder = null;
+    // 设置configuration
     if (this.configuration != null) {
       targetConfiguration = this.configuration;
       if (targetConfiguration.getVariables() == null) {
@@ -668,7 +670,10 @@ public class SqlSessionFactoryBean
     }
 
     Optional.ofNullable(this.cache).ifPresent(targetConfiguration::addCache);
-
+    /**
+     * 执行解析xml操作，
+     * 使得xml的配置解析到Configuration中
+     */
     if (xmlConfigBuilder != null) {
       try {
         xmlConfigBuilder.parse();
@@ -680,10 +685,17 @@ public class SqlSessionFactoryBean
       }
     }
 
+    /**
+     * 创建事务工厂
+     * SpringManagedTransactionFactory
+     */
     targetConfiguration.setEnvironment(new Environment(this.environment,
         this.transactionFactory == null ? new SpringManagedTransactionFactory() : this.transactionFactory,
         this.dataSource));
 
+    /**
+     * 解析XMLMapperBuilder
+     */
     if (this.mapperLocations != null) {
       if (this.mapperLocations.length == 0) {
         LOGGER.warn(() -> "Property 'mapperLocations' was specified but matching resources are not found.");
@@ -693,6 +705,7 @@ public class SqlSessionFactoryBean
             continue;
           }
           try {
+            // XMLMapperBuilder 解析
             XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(mapperLocation.getInputStream(),
                 targetConfiguration, mapperLocation.toString(), targetConfiguration.getSqlFragments());
             xmlMapperBuilder.parse();
@@ -708,14 +721,20 @@ public class SqlSessionFactoryBean
       LOGGER.debug(() -> "Property 'mapperLocations' was not specified.");
     }
 
+    /**
+     * 使用targetConfiguration创建SqlSessionFactory
+     * =》DefaultSqlSessionFactory
+     */
     return this.sqlSessionFactoryBuilder.build(targetConfiguration);
   }
 
   /**
    * {@inheritDoc}
+   * 创建方法
    */
   @Override
   public SqlSessionFactory getObject() throws Exception {
+    // 创建sqlSessionFactory
     if (this.sqlSessionFactory == null) {
       afterPropertiesSet();
     }

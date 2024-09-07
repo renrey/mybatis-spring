@@ -48,6 +48,7 @@ import org.springframework.util.StringUtils;
  * This functionality was previously a private class of {@link MapperScannerConfigurer}, but was broken out in version
  * 1.2.0.
  *
+ * 通过basePackage、annotationClass、markerInterface注册mapper对象
  * @author Hunter Presnall
  * @author Eduardo Macarron
  *
@@ -172,6 +173,7 @@ public class ClassPathMapperScanner extends ClassPathBeanDefinitionScanner {
     boolean acceptAllInterfaces = true;
 
     // if specified, use the given annotation and / or marker interface
+    // 带有指定注解
     if (this.annotationClass != null) {
       addIncludeFilter(new AnnotationTypeFilter(this.annotationClass));
       acceptAllInterfaces = false;
@@ -206,12 +208,14 @@ public class ClassPathMapperScanner extends ClassPathBeanDefinitionScanner {
    */
   @Override
   public Set<BeanDefinitionHolder> doScan(String... basePackages) {
+    // spring原生扫描basePackages的bean
     Set<BeanDefinitionHolder> beanDefinitions = super.doScan(basePackages);
 
     if (beanDefinitions.isEmpty()) {
       LOGGER.warn(() -> "No MyBatis mapper was found in '" + Arrays.toString(basePackages)
           + "' package. Please check your configuration.");
     } else {
+      // 扫描到有bean
       processBeanDefinitions(beanDefinitions);
     }
 
